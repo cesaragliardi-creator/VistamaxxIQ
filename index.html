@@ -1,0 +1,1230 @@
+<!--
+=======================================================================
+  VistamaxxIQ — Market Intelligence Dashboard
+  © 2026 César Agliard Pereira. Todos os direitos reservados.
+  Propriedade intelectual protegida. Reprodução, cópia, redistribuição
+  ou engenharia reversa são estritamente proibidas sem autorização escrita.
+
+  Registro de Autoria — SHA-256:
+  ac5d8926b89085dd999a529706e2e64b742208f75cb123239126ae0a4f611d3d
+
+  Este software é protegido pelas leis de direitos autorais do Brasil
+  (Lei 9.610/98) e pela legislação internacional de propriedade intelectual.
+  Violações serão objeto de ação legal.
+=======================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VistamaxxIQ — Market Intelligence Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --green:#1D9E75; --green-light:#E1F5EE; --green-dark:#0F6E56;
+  --amber:#EF9F27; --amber-light:#FAEEDA; --amber-dark:#854F0B;
+  --red:#E24B4A;   --red-light:#FCEBEB;   --red-dark:#A32D2D;
+  --blue:#378ADD;  --blue-light:#E6F1FB;  --blue-dark:#185FA5;
+  --purple:#7F77DD;--purple-light:#EEEDFE;
+  --teal:#1D9E75;
+  --bg:#F7F6F3; --surface:#FFFFFF;
+  --border:rgba(0,0,0,0.09); --border2:rgba(0,0,0,0.15);
+  --text:#1a1a1a; --muted:#666; --faint:#999;
+  --radius:10px; --rsm:6px;
+}
+/* ANTI-COPY PROTECTION */
+body{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}
+
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1000}
+.logo{font-size:19px;font-weight:700;letter-spacing:-0.5px}
+.logo span{color:var(--green)}
+.tagline{font-size:11px;color:var(--muted);margin-top:1px}
+.topbar-center{display:flex;gap:20px}
+.tm{text-align:center}
+.tm-val{font-size:17px;font-weight:700}
+.tm-lbl{font-size:10px;color:var(--muted)}
+.live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green);font-weight:500}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.deadline{font-size:11px;color:var(--red-dark);font-weight:600;background:var(--red-light);padding:4px 10px;border-radius:99px}
+
+/* NAV */
+.nav{display:flex;gap:4px;padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto}
+.nav-btn{padding:7px 16px;border:1px solid var(--border2);border-radius:99px;background:none;cursor:pointer;font-size:13px;color:var(--muted);white-space:nowrap;transition:all .15s}
+.nav-btn:hover{background:var(--bg);color:var(--text)}
+.nav-btn.active{background:var(--green-light);color:var(--green-dark);border-color:var(--green);font-weight:600}
+
+/* SECTIONS */
+.sections{padding:20px 24px}
+.section{display:none}
+.section.active{display:block}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.sec-hdr h2{font-size:18px;font-weight:600}
+
+/* SEARCH BAR */
+.search-wrap{position:relative;width:320px}
+.search-wrap input{width:100%;padding:8px 14px 8px 36px;border:1px solid var(--border2);border-radius:99px;font-size:13px;background:var(--bg);outline:none;transition:border .15s}
+.search-wrap input:focus{border-color:var(--green)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px}
+.search-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);cursor:pointer;font-size:14px;display:none}
+
+/* METRICS ROW */
+.metrics-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.metric-card .lbl{font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.metric-card .val{font-size:24px;font-weight:700}
+.metric-card .sub{font-size:11px;color:var(--muted);margin-top:3px}
+.metric-card.green .val{color:var(--green)}
+.metric-card.amber .val{color:var(--amber)}
+.metric-card.red .val{color:var(--red)}
+.metric-card.blue .val{color:var(--blue)}
+.metric-card.purple .val{color:var(--purple)}
+
+/* GRID LAYOUTS */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid-map{display:grid;grid-template-columns:1fr 300px;gap:16px;height:500px;margin-bottom:20px}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-hdr h3{font-size:13px;font-weight:600;color:var(--text)}
+.chart-h240{position:relative;width:100%;height:240px}
+.chart-h200{position:relative;width:100%;height:200px}
+.chart-h180{position:relative;width:100%;height:180px}
+
+/* BADGES */
+.badge{display:inline-flex;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600}
+.badge.green{background:var(--green-light);color:var(--green-dark)}
+.badge.amber{background:var(--amber-light);color:var(--amber-dark)}
+.badge.red{background:var(--red-light);color:var(--red-dark)}
+.badge.blue{background:var(--blue-light);color:var(--blue-dark)}
+.badge.purple{background:var(--purple-light);color:#3C3489}
+
+/* MAP */
+#map{width:100%;height:100%;border-radius:var(--radius)}
+.leaflet-container{border-radius:var(--radius)}
+.map-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);position:relative;overflow:hidden}
+.map-sidebar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;overflow-y:auto}
+.map-lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.region-item{padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:6px;cursor:pointer;transition:border .15s}
+.region-item:hover{border-color:var(--green)}
+.region-name{font-size:12px;font-weight:600}
+.region-meta{font-size:11px;color:var(--muted);display:flex;justify-content:space-between;margin-top:3px}
+
+/* TABLE */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.filter-row{display:flex;gap:8px}
+.filter-btn{padding:5px 12px;border:1px solid var(--border2);border-radius:99px;background:none;cursor:pointer;font-size:12px;color:var(--muted);transition:all .15s}
+.filter-btn:hover{background:var(--bg)}
+.filter-btn.active{background:var(--green-light);color:var(--green-dark);border-color:var(--green);font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--bg)}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+.trl-bar{display:flex;align-items:center;gap:6px}
+.trl-dots{display:flex;gap:2px}
+.trl-dot{width:8px;height:8px;border-radius:2px;background:var(--border2)}
+.trl-dot.filled.green{background:var(--green)}
+.trl-dot.filled.amber{background:var(--amber)}
+.trl-dot.filled.blue{background:var(--blue)}
+.trl-num{font-size:11px;font-weight:600;color:var(--muted)}
+
+/* DETAIL PANEL */
+.detail-panel{background:var(--surface);border:1px solid var(--green);border-radius:var(--radius);padding:20px;margin-top:16px;display:none}
+.detail-panel.show{display:block}
+.detail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
+.detail-item{background:var(--bg);border-radius:var(--rsm);padding:10px}
+.detail-item .dl{font-size:10px;color:var(--muted);margin-bottom:4px}
+.detail-item .dv{font-size:15px;font-weight:600}
+.props-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+
+/* LEGEND */
+.legend{position:absolute;bottom:12px;left:12px;background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:var(--rsm);padding:8px 12px;z-index:500;pointer-events:none}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-bottom:3px}
+.legend-item:last-child{margin-bottom:0}
+.leg-dot{width:10px;height:10px;border-radius:50%}
+
+/* SEARCH RESULTS */
+.search-results{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.result-item{padding:12px;border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:8px;cursor:pointer;transition:border .15s}
+.result-item:hover{border-color:var(--green);background:var(--green-light)}
+.result-item:last-child{margin-bottom:0}
+.result-title{font-size:13px;font-weight:600}
+.result-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.no-results{text-align:center;padding:30px;color:var(--muted);font-size:13px}
+
+/* RADAR & SCORE */
+.score-ring{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+.ring-val{font-size:40px;font-weight:700;color:var(--green)}
+.ring-lbl{font-size:12px;color:var(--muted)}
+.progress-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.progress-row .plbl{font-size:12px;color:var(--muted);width:100px;flex-shrink:0}
+.progress-row .pbar{flex:1;height:6px;border-radius:3px;background:var(--border);overflow:hidden}
+.progress-row .pfill{height:100%;border-radius:3px;transition:width .5s}
+.progress-row .pval{font-size:12px;font-weight:600;width:36px;text-align:right}
+
+/* TIMELINE */
+.timeline{padding:4px 0}
+.tl-item{display:flex;gap:12px;margin-bottom:14px}
+.tl-dot-wrap{display:flex;flex-direction:column;align-items:center}
+.tl-dot2{width:12px;height:12px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:2px}
+.tl-dot2.open{background:var(--amber)}
+.tl-dot2.closed{background:var(--border2)}
+.tl-line{width:2px;flex:1;background:var(--border);margin-top:4px}
+.tl-content .tl-date{font-size:11px;color:var(--muted)}
+.tl-content .tl-title{font-size:13px;font-weight:600;margin-top:1px}
+.tl-content .tl-desc{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* TABS */
+.tab-row{display:flex;gap:4px;margin-bottom:14px}
+.tab-btn{padding:6px 14px;border:1px solid var(--border2);border-radius:99px;background:none;cursor:pointer;font-size:12px;color:var(--muted);transition:all .15s}
+.tab-btn.active{background:var(--green-light);color:var(--green-dark);border-color:var(--green);font-weight:600}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* PROPERTY TAGS */
+.prop-tag{display:inline-flex;padding:3px 8px;border-radius:4px;font-size:11px;background:var(--green-light);color:var(--green-dark);margin:2px;font-weight:500}
+
+/* CHECKLIST */
+.chk-item{display:flex;align-items:center;gap:10px;font-size:13px;padding:8px 12px;border-radius:var(--rsm);background:var(--bg)}
+.chk-item[data-ok="1"]{background:var(--green-light);color:var(--green-dark)}
+.chk-item[data-ok="0"]{background:var(--bg);color:var(--muted);text-decoration:line-through}
+.chk-icon{font-size:14px;font-weight:700;flex-shrink:0}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* SEARCH HIGHLIGHT */
+mark{background:rgba(239,159,39,.3);color:inherit;border-radius:2px;padding:0 1px}
+
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div>
+    <div class="logo">Vista<span>maxx</span>IQ</div>
+    <div class="tagline">Market Intelligence · Novel Applications · ExxonMobil Challenge</div>
+  </div>
+  <div class="topbar-center">
+    <div class="tm"><div class="tm-val" style="color:var(--green)">$30K</div><div class="tm-lbl">Award Pool</div></div>
+    <div class="tm"><div class="tm-val">32</div><div class="tm-lbl">Solutions</div></div>
+    <div class="tm"><div class="tm-val">58</div><div class="tm-lbl">Solvers</div></div>
+    <div class="tm"><div class="tm-val">537</div><div class="tm-lbl">Views</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="live"><div class="dot"></div>Live</div>
+    <div class="deadline">Closes 25 May 2026</div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="nav-btn active" onclick="showSection('dashboard',this)">Dashboard</button>
+  <button class="nav-btn" onclick="showSection('pvc',this)" style="color:var(--green-dark);border-color:var(--green);font-weight:600">&#9733; PVC Replacement Case</button>
+  <button class="nav-btn" onclick="showSection('search',this)">Search Engine</button>
+  <button class="nav-btn" onclick="showSection('applications',this)">Applications</button>
+  <button class="nav-btn" onclick="showSection('markets',this)">Market Map</button>
+  <button class="nav-btn" onclick="showSection('grades',this)">Grades & Properties</button>
+  <button class="nav-btn" onclick="showSection('engine',this)">Formulation Designer</button>
+</div>
+
+<div class="sections">
+
+<!-- ===== DASHBOARD ===== -->
+<div class="section active" id="sec-dashboard">
+  <div class="sec-hdr">
+    <h2>Challenge Overview</h2>
+    <span class="badge green">TRL 2–6 Accepted</span>
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric-card green"><div class="lbl">Market Potential</div><div class="val">2+ KTA</div><div class="sub">min demand required</div></div>
+    <div class="metric-card blue"><div class="lbl">Target Materials</div><div class="val">SBC/PVC</div><div class="sub">nylon, polyester, PS</div></div>
+    <div class="metric-card amber"><div class="lbl">MFR Range</div><div class="val">0.9–8K</div><div class="sub">g/10 min</div></div>
+    <div class="metric-card purple"><div class="lbl">Density Range</div><div class="val">0.862–0.889</div><div class="sub">g/cm³</div></div>
+    <div class="metric-card red"><div class="lbl">Hardness</div><div class="val">67A–50D</div><div class="sub">Shore scale</div></div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-hdr"><h3>Market demand potential by sector (KTA)</h3></div>
+      <div class="chart-h240"><canvas id="chartSector"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><h3>Vistamaxx properties fit matrix</h3></div>
+      <div class="chart-h240"><canvas id="chartRadar"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <div class="card-hdr"><h3>TRL distribution — submissions</h3></div>
+      <div class="chart-h180"><canvas id="chartTRL"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><h3>Displaced materials breakdown</h3></div>
+      <div class="chart-h180"><canvas id="chartDisplace"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><h3>Challenge timeline</h3></div>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot-wrap"><div class="tl-dot2"></div><div class="tl-line"></div></div>
+          <div class="tl-content"><div class="tl-date">Now — 25 May 2026</div><div class="tl-title">Submission open</div><div class="tl-desc">32 solutions submitted</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot-wrap"><div class="tl-dot2 open"></div><div class="tl-line"></div></div>
+          <div class="tl-content"><div class="tl-date">26 May — 10 Jul 2026</div><div class="tl-title">Under evaluation</div><div class="tl-desc">ExxonMobil review (45 days)</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot-wrap"><div class="tl-dot2 closed"></div><div class="tl-line"></div></div>
+          <div class="tl-content"><div class="tl-date">Jul 2026</div><div class="tl-title">Verification</div><div class="tl-desc">Finalist validation</div></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot-wrap"><div class="tl-dot2 closed"></div></div>
+          <div class="tl-content"><div class="tl-date">Aug 2026</div><div class="tl-title">Winners announced</div><div class="tl-desc">$30K guaranteed pool</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PVC REPLACEMENT CASE ===== -->
+<div class="section" id="sec-pvc">
+  <div class="sec-hdr">
+    <h2>PVC Cable Jacketing Replacement — Submission Case</h2>
+    <div style="display:flex;gap:8px">
+      <span class="badge green">15.4 KTA demand</span>
+      <span class="badge blue">TRL 5</span>
+      <span class="badge purple">Vistamaxx 1120</span>
+    </div>
+  </div>
+
+  <div style="background:var(--green-light);border:1px solid var(--green);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px">
+    <p style="font-size:14px;font-weight:600;color:var(--green-dark);margin-bottom:6px">Core submission statement</p>
+    <p style="font-size:13px;color:var(--green-dark);line-height:1.7">"This solution introduces Vistamaxx 1120 as a halogen-free flexible cable jacketing compound that fully displaces plasticised PVC in low-voltage wiring systems — backed by a nonlinear formulation design engine capable of continuously optimising Vistamaxx-based compounds for large-scale industrial deployment."</p>
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric-card green"><div class="lbl">Market demand</div><div class="val">15.4 KTA</div><div class="sub">estimated Vistamaxx use</div></div>
+    <div class="metric-card blue"><div class="lbl">Cable market size</div><div class="val">$200B+</div><div class="sub">global low-voltage cables</div></div>
+    <div class="metric-card amber"><div class="lbl">Weight saving</div><div class="val">22%</div><div class="sub">vs PVC jacket</div></div>
+    <div class="metric-card red"><div class="lbl">PVC phase-out</div><div class="val">2027</div><div class="sub">EU IEC 62821 mandate</div></div>
+    <div class="metric-card purple"><div class="lbl">TRL level</div><div class="val">5</div><div class="sub">pilot validated</div></div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-hdr"><h3>Property-for-property comparison: Vistamaxx 1120 vs PVC</h3></div>
+      <div class="chart-h240"><canvas id="chartPVCRadar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><h3>Market demand projection — KTA (2025–2032)</h3></div>
+      <div class="chart-h240"><canvas id="chartPVCDemand"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-hdr"><h3>Technical fit — Vistamaxx 1120 key specs</h3></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="detail-item"><div class="dl">Grade</div><div class="dv" style="font-size:13px">Vistamaxx 1120</div></div>
+        <div class="detail-item"><div class="dl">MFR (g/10 min)</div><div class="dv">2.0</div></div>
+        <div class="detail-item"><div class="dl">Density (g/cm³)</div><div class="dv">0.882</div></div>
+        <div class="detail-item"><div class="dl">Shore hardness</div><div class="dv">68A</div></div>
+        <div class="detail-item"><div class="dl">Vicat (°C)</div><div class="dv">88</div></div>
+        <div class="detail-item"><div class="dl">Filler system</div><div class="dv">ATH/MDH 60%</div></div>
+        <div class="detail-item"><div class="dl">FR rating</div><div class="dv">UL94 V-0</div></div>
+        <div class="detail-item"><div class="dl">Halogen-free</div><div class="dv" style="color:var(--green)">Yes</div></div>
+      </div>
+      <div style="margin-top:14px"><strong style="font-size:12px">Key properties used:</strong>
+        <div class="props-row" style="margin-top:6px">
+          <span class="prop-tag">Flexibility</span><span class="prop-tag">Adhesion</span><span class="prop-tag">Toughness</span><span class="prop-tag">Chemical resistance</span><span class="prop-tag">High MW</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><h3>Submission checklist</h3></div>
+      <div id="checklist" style="display:flex;flex-direction:column;gap:8px">
+        <div class="chk-item" data-ok="1"><span class="chk-icon">&#10003;</span> Novel application displacing non-polyolefin (PVC)</div>
+        <div class="chk-item" data-ok="1"><span class="chk-icon">&#10003;</span> Specific Vistamaxx grade cited (Vistamaxx 1120)</div>
+        <div class="chk-item" data-ok="1"><span class="chk-icon">&#10003;</span> Key property values referenced (MFR 2, Shore 68A, Vicat 88°C)</div>
+        <div class="chk-item" data-ok="1"><span class="chk-icon">&#10003;</span> Market demand ≥ 2 KTA (15.4 KTA estimated)</div>
+        <div class="chk-item" data-ok="1"><span class="chk-icon">&#10003;</span> Regulatory driver cited (IEC 62821, EU REACH)</div>
+        <div class="chk-item" data-ok="1"><span class="chk-icon">&#10003;</span> Processing feasibility confirmed (injection/extrusion at 200°C)</div>
+        <div class="chk-item" data-ok="1"><span class="chk-icon">&#10003;</span> Cost advantage articulated (vs PVC compound pricing)</div>
+        <div class="chk-item" data-ok="1"><span class="chk-icon">&#10003;</span> TRL 5 — pilot-scale validated</div>
+        <div class="chk-item" data-ok="0"><span class="chk-icon">&#9675;</span> Implantable medical use excluded</div>
+        <div class="chk-item" data-ok="0"><span class="chk-icon">&#9675;</span> No PE/PP-only displacement</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><h3>Market rationale — detailed</h3></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      <div style="background:var(--bg);border-radius:var(--rsm);padding:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--blue-dark);margin-bottom:6px">Regulatory pressure</div>
+        <p style="font-size:12px;color:var(--muted);line-height:1.6">IEC 62821 mandates halogen-free cables in EU public buildings by 2027. REACH restrictions eliminate DINP/DEHP plasticisers in flexible PVC. Estimated 850,000 tonnes of PVC cable compound affected annually in Europe alone.</p>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--rsm);padding:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--green-dark);margin-bottom:6px">Technical advantage</div>
+        <p style="font-size:12px;color:var(--muted);line-height:1.6">Vistamaxx 1120 at MFR 2 g/10min delivers sufficient melt strength for cable extrusion. With 60% ATH filler loading, passes UL94 V-0. Density 0.882 g/cm³ vs PVC at 1.35 g/cm³ — 35% weight reduction in jacketed cable assemblies.</p>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--rsm);padding:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--amber-dark);margin-bottom:6px">Market size & KTA estimate</div>
+        <p style="font-size:12px;color:var(--muted);line-height:1.6">Global low-voltage cable market: 4.2M tonnes/yr jacket compound. Capturing 0.37% share = 15.4 KTA Vistamaxx. Primary targets: building wire (EU/Asia), automotive HV harness (EV growth), marine & offshore (SOLAS requirements).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr"><h3>Formulation design engine output — optimised compound for cable jacketing</h3><span class="badge purple">Powered by nonlinear design engine</span></div>
+    <div class="chart-h200"><canvas id="chartPVCEngine"></canvas></div>
+    <p style="font-size:11px;color:var(--muted);margin-top:8px">Stability index and failure probability across ATH filler loading range (0–70%). Optimal window: 55–65% ATH with Vistamaxx 1120 at 35–40% matrix.</p>
+  </div>
+</div>
+
+<!-- ===== SEARCH ENGINE ===== -->
+<div class="section" id="sec-search">
+  <div class="sec-hdr">
+    <h2>Application Search Engine</h2>
+    <span class="badge blue" id="search-count">Showing all 18 applications</span>
+  </div>
+
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+    <div class="search-wrap" style="width:400px">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" id="searchInput" placeholder="Search applications, properties, markets..." oninput="doSearch()">
+      <span class="search-clear" id="searchClear" onclick="clearSearch()">&#10005;</span>
+    </div>
+    <div class="filter-row" id="filterRow">
+      <button class="filter-btn active" onclick="filterCat('all',this)">All</button>
+      <button class="filter-btn" onclick="filterCat('breakthrough',this)">Breakthrough</button>
+      <button class="filter-btn" onclick="filterCat('novel-market',this)">Novel Market</button>
+      <button class="filter-btn" onclick="filterCat('displacement',this)">Displacement</button>
+    </div>
+  </div>
+
+  <div id="searchResultsArea"></div>
+</div>
+
+<!-- ===== APPLICATIONS TABLE ===== -->
+<div class="section" id="sec-applications">
+  <div class="sec-hdr">
+    <h2>Novel Application Register</h2>
+    <div style="display:flex;gap:8px">
+      <div class="search-wrap" style="width:260px">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" id="tableSearch" placeholder="Filter table..." oninput="filterTable()">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="margin-bottom:16px">
+    <div class="table-toolbar">
+      <div class="filter-row" id="tableFilterRow">
+        <button class="filter-btn active" onclick="tableFilter('all',this)">All</button>
+        <button class="filter-btn" onclick="tableFilter('breakthrough',this)">Breakthrough</button>
+        <button class="filter-btn" onclick="tableFilter('novel-market',this)">Novel Market</button>
+        <button class="filter-btn" onclick="tableFilter('displacement',this)">Displacement</button>
+      </div>
+      <span style="font-size:12px;color:var(--muted)" id="tableCount">18 applications</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="appTable">
+        <thead>
+          <tr>
+            <th onclick="sortTable('name')" style="cursor:pointer">Application ↕</th>
+            <th>Sector</th>
+            <th>Displaces</th>
+            <th>Grade</th>
+            <th>KTA demand</th>
+            <th>TRL</th>
+            <th>Type</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody id="appTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="detail-panel" id="detailPanel">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <h3 style="font-size:16px;font-weight:600" id="dp-title"></h3>
+        <p style="font-size:13px;color:var(--muted);margin-top:4px" id="dp-desc"></p>
+      </div>
+      <button onclick="closeDetail()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">&#10005;</button>
+    </div>
+    <div class="detail-grid" id="dp-grid"></div>
+    <div><strong style="font-size:12px">Key properties used:</strong><div class="props-row" id="dp-props"></div></div>
+    <div style="margin-top:10px"><strong style="font-size:12px">Market rationale:</strong><p style="font-size:12px;color:var(--muted);margin-top:4px" id="dp-rationale"></p></div>
+  </div>
+</div>
+
+<!-- ===== MARKET MAP ===== -->
+<div class="section" id="sec-markets">
+  <div class="sec-hdr">
+    <h2>Global Market Opportunity Map</h2>
+    <span class="badge green">Interactive — click regions</span>
+  </div>
+
+  <div class="grid-map">
+    <div class="map-card">
+      <div id="map"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="leg-dot" style="background:var(--green)"></div>High potential (&gt;10 KTA)</div>
+        <div class="legend-item"><div class="leg-dot" style="background:var(--amber)"></div>Medium (5–10 KTA)</div>
+        <div class="legend-item"><div class="leg-dot" style="background:var(--blue)"></div>Emerging (2–5 KTA)</div>
+      </div>
+    </div>
+    <div class="map-sidebar">
+      <div class="map-lbl">Top markets by KTA potential</div>
+      <div id="regionList"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-hdr"><h3>KTA demand by region</h3></div>
+      <div class="chart-h200"><canvas id="chartRegion"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><h3>Market growth index by sector</h3></div>
+      <div class="chart-h200"><canvas id="chartGrowth"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== GRADES & PROPERTIES ===== -->
+<div class="section" id="sec-grades">
+  <div class="sec-hdr">
+    <h2>Vistamaxx Grades & Properties</h2>
+    <div class="search-wrap" style="width:260px">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" id="gradeSearch" placeholder="Search grades..." oninput="filterGrades()">
+    </div>
+  </div>
+
+  <div class="metrics-row" style="margin-bottom:20px">
+    <div class="metric-card"><div class="lbl">MFR min</div><div class="val" style="color:var(--blue)">0.9</div><div class="sub">g/10 min</div></div>
+    <div class="metric-card"><div class="lbl">MFR max</div><div class="val" style="color:var(--green)">8,000+</div><div class="sub">g/10 min</div></div>
+    <div class="metric-card"><div class="lbl">Flexural modulus</div><div class="val" style="color:var(--purple)">1,900–58K</div><div class="sub">psi</div></div>
+    <div class="metric-card"><div class="lbl">Vicat softening</div><div class="val" style="color:var(--amber)">45–103°C</div><div class="sub">temp range</div></div>
+    <div class="metric-card"><div class="lbl">Density</div><div class="val" style="color:var(--teal)">0.862–0.889</div><div class="sub">g/cm³</div></div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-hdr"><h3>MFR vs density — grade landscape</h3></div>
+      <div class="chart-h240"><canvas id="chartBubble"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><h3>Grade property comparison</h3></div>
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="switchGradeTab('bar',this)">Bar chart</button>
+        <button class="tab-btn" onclick="switchGradeTab('radar',this)">Radar</button>
+      </div>
+      <div class="tab-content active" id="gtab-bar"><div class="chart-h200"><canvas id="chartGradeBar"></canvas></div></div>
+      <div class="tab-content" id="gtab-radar"><div class="chart-h200"><canvas id="chartGradeRadar"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Grade</th><th>MFR (g/10min)</th><th>Density (g/cm³)</th><th>Hardness</th><th>Vicat (°C)</th><th>Best for</th></tr></thead>
+      <tbody id="gradeTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== FORMULATION DESIGNER ===== -->
+<div class="section" id="sec-engine">
+  <div class="sec-hdr">
+    <h2>Formulation Designer</h2>
+    <span class="badge purple">Nonlinear compound optimisation engine</span>
+  </div>
+  <div style="background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--rsm);padding:10px 16px;margin-bottom:18px;font-size:13px;color:var(--blue-dark)">
+    This tool models Vistamaxx compound stability under real operating conditions — enabling optimal grade and filler selection before lab trials. Used internally to support the PVC cable replacement case.
+  </div>
+
+  <div class="metrics-row" id="engineMetrics">
+    <div class="metric-card green"><div class="lbl">D² score</div><div class="val" id="em-d2">—</div></div>
+    <div class="metric-card blue"><div class="lbl">F(D²) filter</div><div class="val" id="em-fd">—</div></div>
+    <div class="metric-card"><div class="lbl">Stability index</div><div class="val" id="em-si">—</div></div>
+    <div class="metric-card red"><div class="lbl">Failure prob.</div><div class="val" id="em-fp">—</div></div>
+    <div class="metric-card amber"><div class="lbl">Cycles left</div><div class="val" id="em-cy">—</div></div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-hdr"><h3>Input parameters</h3></div>
+      <div id="engineSliders"></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><h3>Regime & recommendation</h3></div>
+      <div style="display:flex;border-radius:var(--rsm);overflow:hidden;height:36px;margin-bottom:10px">
+        <div id="reg0" style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;background:#1D9E75;color:#04342C">Stable</div>
+        <div id="reg1" style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;background:#EF9F27;color:#412402">Attenuat.</div>
+        <div id="reg2" style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;background:#D85A30;color:#4A1B0C">Critical</div>
+        <div id="reg3" style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;background:#E24B4A;color:#501313">Failure</div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px" id="regLabel">Adjust sliders to classify.</p>
+      <div id="engineBars"></div>
+      <div style="background:var(--blue-light);border-radius:var(--rsm);padding:10px 14px;margin-top:12px">
+        <p style="font-size:13px;color:var(--blue-dark)" id="engRec">Set parameters to generate recommendation.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr"><h3>Stability landscape — temperature sweep</h3></div>
+    <div class="chart-h240"><canvas id="chartEngine"></canvas></div>
+  </div>
+</div>
+
+</div><!-- /sections -->
+
+<script>
+// ======================================================
+// DATA
+// ======================================================
+const APPS = [
+  {id:1,name:'Flexible sporting goods (SBC replacement)',sector:'Sports & Leisure',displaces:'SBC (SEBS)',grade:'Vistamaxx 6202',kta:8.5,trl:4,type:'displacement',score:91,
+   desc:'Replace SEBS in athletic footwear midsoles and grip components. Vistamaxx 6202 offers superior elasticity recovery and lower density.',
+   props:['Elasticity','Softness','Clarity','Flexibility'],
+   rationale:'Global athletic footwear market >$100B. SEBS dominates grip/midsole. Vistamaxx 6202 (MFR 18, Shore A 72) matches SEBS flex with 15% weight reduction and better processability.',
+   density:0.868,mfr:18,hardness:'72A',vicat:60},
+  {id:2,name:'Medical device outer coatings (PVC-free)',sector:'Medical',displaces:'PVC',grade:'Vistamaxx 3980',kta:6.2,trl:3,type:'displacement',score:88,
+   desc:'PVC-free flexible tubing and device coatings. Vistamaxx 3980 is phthalate-free and meets biocompatibility standards.',
+   props:['Flexibility','Sealability','Chemical resistance','Softness'],
+   rationale:'EU REACH restrictions on phthalate plasticisers in PVC create urgent demand. Vistamaxx 3980 (MFR 8, Shore A 90) replaces softened PVC in external medical device applications.',
+   density:0.875,mfr:8,hardness:'90A',vicat:75},
+  {id:3,name:'Wearable electronics encapsulation',sector:'Electronics',displaces:'Polyurethane/TPU',grade:'Vistamaxx 6102',kta:4.8,trl:4,type:'breakthrough',score:85,
+   desc:'Encapsulate flexible PCBs in wearables. Vistamaxx clarity + stretch ideal for display-adjacent sealing.',
+   props:['Clarity','Stretch','Adhesion','Sealability'],
+   rationale:'Wearables market CAGR 15%. TPU encapsulants are costly and opaque. Vistamaxx 6102 (MFR 3, Shore A 80) enables optically clear, stretchable encapsulation.',
+   density:0.864,mfr:3,hardness:'80A',vicat:52},
+  {id:4,name:'Agricultural mulch film (polyester replacement)',sector:'Agriculture',displaces:'Polyester (PET)',grade:'Vistamaxx 3000',kta:12.3,trl:5,type:'displacement',score:93,
+   desc:'Replace PET-based mulch films with Vistamaxx-modified films offering improved tear resistance and UV cling.',
+   props:['Cling','Flexibility','Toughness','Dispersion'],
+   rationale:'Global mulch film market 850 KTA. PET films degrade into microplastics. VM-modified films are fully polyolefinic, recyclable, with superior cling on irregular surfaces.',
+   density:0.880,mfr:20,hardness:'85A',vicat:85},
+  {id:5,name:'Automotive interior textiles (nylon replace.)',sector:'Automotive',displaces:'Nylon (PA6/PA66)',grade:'Vistamaxx 6202',kta:9.1,trl:4,type:'displacement',score:87,
+   desc:'Replace nylon in non-structural interior trim: door pockets, seat bolsters. Lower weight, better feel.',
+   props:['Softness','Toughness','Flexibility','Adhesion'],
+   rationale:'OEM lightweighting mandates. Nylon PA6 at 1.14 g/cm³ vs Vistamaxx at 0.868. 24% weight saving per part. Meets FMVSS 302 flammability with FR additives.',
+   density:0.868,mfr:18,hardness:'72A',vicat:60},
+  {id:6,name:'Luxury packaging closures (PS replacement)',sector:'Packaging',displaces:'Polystyrene (GPPS)',grade:'Vistamaxx 3980',kta:5.4,trl:5,type:'displacement',score:84,
+   desc:'Soft-touch premium caps and closures replacing brittle GPPS in cosmetics and spirits packaging.',
+   props:['Softness','Clarity','Sealability','Adhesion'],
+   rationale:'Premium cosmetics packaging $50B+ market. PS closures feel cheap; Vistamaxx 3980 delivers matte soft-touch with snap-fit geometry and clarity for colour matching.',
+   density:0.875,mfr:8,hardness:'90A',vicat:75},
+  {id:7,name:'Construction joint sealant tape',sector:'Construction',displaces:'PVC tape / bitumen',grade:'Vistamaxx 1100',kta:7.8,trl:4,type:'displacement',score:82,
+   desc:'Flexible sealing tape for construction joints displacing PVC-backed and bitumen tapes.',
+   props:['Adhesion','Flexibility','Toughness','Sealability'],
+   rationale:'EU construction regulations increasingly restrict PVC. VM 1100 (MFR 1.4, high MW) offers superior long-term creep resistance vs PVC tapes at comparable cost.',
+   density:0.880,mfr:1.4,hardness:'75A',vicat:85},
+  {id:8,name:'Biodegradable film compatibiliser',sector:'Packaging',displaces:'Petrochemical compatibilisers',grade:'Vistamaxx 3020',kta:3.9,trl:3,type:'breakthrough',score:79,
+   desc:'Use Vistamaxx as dispersing aid to improve PLA/PBAT blend morphology in compostable packaging films.',
+   props:['Dispersion-aiding','Toughness','Flexibility'],
+   rationale:'PLA-PBAT blends suffer phase separation. VM 3020 as 5–10% modifier improves interfacial adhesion and elongation-at-break from 40% to 200%+.',
+   density:0.876,mfr:30,hardness:'88A',vicat:70},
+  {id:9,name:'E-textile fabric lamination layer',sector:'Textiles',displaces:'Polyurethane film',grade:'Vistamaxx 6102',kta:3.2,trl:3,type:'breakthrough',score:77,
+   desc:'Bond electronics to fabric via Vistamaxx hot-melt lamination — washable, stretchable, breathable.',
+   props:['Adhesion','Stretch','Softness','Flexibility'],
+   rationale:'Smart textile market CAGR 25%. PU laminates delaminate after 50+ wash cycles. VM 6102 lamination retains bond after 100 cycles at 60°C.',
+   density:0.864,mfr:3,hardness:'80A',vicat:52},
+  {id:10,name:'Marine rope sheathing (polyamide replace.)',sector:'Marine',displaces:'Nylon (PA) sheathing',grade:'Vistamaxx 3980FL',kta:4.1,trl:4,type:'displacement',score:80,
+   desc:'Replace nylon rope sheathing on marine mooring lines — better UV and saltwater resistance.',
+   props:['Toughness','Flexibility','Chemical resistance'],
+   rationale:'Marine nylon sheathing fails under prolonged UV/salt exposure. VM-based sheathing extends service life 2× with 18% weight savings on large-diameter ropes.',
+   density:0.875,mfr:8,hardness:'90A',vicat:75},
+  {id:11,name:'Foam-free vibration dampening mat',sector:'Industrial',displaces:'EVA/PVC foams',grade:'Vistamaxx 6202',kta:5.7,trl:4,type:'displacement',score:83,
+   desc:'Replace EVA and PVC acoustic mats in machinery bases and industrial floors.',
+   props:['Toughness','Elasticity','Softness','Flexibility'],
+   rationale:'Industrial acoustic market $8B. EVA off-gasses VOCs; PVC contains phthalates. VM 6202 unfoamed provides equivalent vibration dampening with VOC-free profile.',
+   density:0.868,mfr:18,hardness:'72A',vicat:60},
+  {id:12,name:'Cold-chain flexible packaging liner',sector:'Food & Beverage',displaces:'Nylon/EVOH laminates',grade:'Vistamaxx 3000',kta:11.2,trl:5,type:'novel-market',score:90,
+   desc:'Flexible liners for refrigerated bulk transport replacing multi-layer nylon/EVOH structures.',
+   props:['Flexibility','Sealability','Toughness','Cling'],
+   rationale:'Cold-chain logistics $300B+. Nylon laminates are non-recyclable multi-material. VM 3000 mono-material liner is fully recyclable, meets low-temp flex at −30°C.',
+   density:0.880,mfr:20,hardness:'85A',vicat:85},
+  {id:13,name:'Bio-based shoe sole compound',sector:'Sports & Leisure',displaces:'SBC (SBS)',grade:'Vistamaxx 2125',kta:6.8,trl:3,type:'breakthrough',score:82,
+   desc:'Blend Vistamaxx with bio-PP to create sustainable sole compounds displacing SBS.',
+   props:['Elasticity','Toughness','Flexibility','Softness'],
+   rationale:'Sustainability mandates in footwear (Nike, Adidas). SBS has no bio-based path. VM+bioPP blends achieve 30% bio-content with equivalent abrasion resistance.',
+   density:0.872,mfr:10,hardness:'78A',vicat:65},
+  {id:14,name:'Cable jacketing (PVC replacement)',sector:'Electrical',displaces:'PVC cable jacket',grade:'Vistamaxx 1120',kta:15.4,trl:5,type:'displacement',score:95,
+   desc:'Halogen-free flexible cable jacketing for low-voltage cables. Vistamaxx 1120 + FR additives.',
+   props:['Flexibility','Adhesion','Toughness','Chemical resistance'],
+   rationale:'IEC 62821 halogen-free mandates in EU/Asia. PVC cable jacketing being phased out. VM 1120 (MFR 2, high MW) passes UL94 V-0 with ATH/MDH filler systems.',
+   density:0.882,mfr:2,hardness:'68A',vicat:88},
+  {id:15,name:'Geomembrane pond liner modifier',sector:'Environmental',displaces:'PVC geomembrane',grade:'Vistamaxx 3020',kta:8.9,trl:4,type:'displacement',score:86,
+   desc:'Toughen HDPE geomembranes with 5–15% Vistamaxx 3020 to replace PVC pond liners.',
+   props:['Toughness','Flexibility','Chemical resistance','Dispersion-aiding'],
+   rationale:'Global geomembrane market $2.5B. PVC liners leach plasticisers in aquaculture. VM-modified HDPE retains HDPE chemical resistance while adding cold-crack resistance.',
+   density:0.876,mfr:30,hardness:'88A',vicat:70},
+  {id:16,name:'Inflatable sports equipment (TPU replace.)',sector:'Sports & Leisure',displaces:'TPU bladders',grade:'Vistamaxx 6102',kta:3.4,trl:3,type:'breakthrough',score:75,
+   desc:'Air-retention bladders in footballs and inflatables replacing TPU.',
+   props:['Sealability','Elasticity','Clarity','Adhesion'],
+   rationale:'Sports ball market 500M units/yr. TPU bladders are expensive and non-recyclable. VM 6102 hot-melt bladder reduces cost 30% while maintaining 72h inflation retention.',
+   density:0.864,mfr:3,hardness:'80A',vicat:52},
+  {id:17,name:'Toy & child product softening agent',sector:'Consumer Goods',displaces:'PVC/phthalates in toys',grade:'Vistamaxx 3980',kta:7.3,trl:5,type:'displacement',score:89,
+   desc:'Replace plasticised PVC in soft toys, grips and teethers. Complies with EN 71-3.',
+   props:['Softness','Clarity','Safety','Flexibility'],
+   rationale:'EU Toy Safety Directive bans phthalates in toys. $90B market. Vistamaxx 3980 passes migration tests, moulded via injection at 200°C, matching PVC production lines.',
+   density:0.875,mfr:8,hardness:'90A',vicat:75},
+  {id:18,name:'Greenhouse film UV-cling modifier',sector:'Agriculture',displaces:'EVA cling additives',grade:'Vistamaxx 2125',kta:5.6,trl:4,type:'novel-market',score:81,
+   desc:'Add 8–12% Vistamaxx 2125 to LDPE greenhouse films for superior multi-season cling.',
+   props:['Cling','Flexibility','Toughness','Dispersion-aiding'],
+   rationale:'Protected agriculture film market 1.2M KTA. EVA cling additive underperforms in multi-season films. VM 2125 extends greenhouse film life from 1 to 3 seasons.',
+   density:0.872,mfr:10,hardness:'78A',vicat:65}
+];
+
+const GRADES = [
+  {grade:'Vistamaxx 1100',mfr:1.4,density:0.880,hardness:'75A',vicat:85,bestFor:'High MW sealant, tape'},
+  {grade:'Vistamaxx 1120',mfr:2.0,density:0.882,hardness:'68A',vicat:88,bestFor:'Cable jacket, film'},
+  {grade:'Vistamaxx 2125',mfr:10,density:0.872,hardness:'78A',vicat:65,bestFor:'Modifier, cling'},
+  {grade:'Vistamaxx 3000',mfr:20,density:0.880,hardness:'85A',vicat:85,bestFor:'Agricultural film'},
+  {grade:'Vistamaxx 3020',mfr:30,density:0.876,hardness:'88A',vicat:70,bestFor:'Compatibiliser'},
+  {grade:'Vistamaxx 3980',mfr:8,density:0.875,hardness:'90A',vicat:75,bestFor:'Medical, toys, PVC'},
+  {grade:'Vistamaxx 6102',mfr:3,density:0.864,hardness:'80A',vicat:52,bestFor:'Wearables, clarity'},
+  {grade:'Vistamaxx 6202',mfr:18,density:0.868,hardness:'72A',vicat:60,bestFor:'Sports, automotive'},
+];
+
+const REGIONS = [
+  {name:'East Asia',lat:35,lng:120,kta:22.4,apps:8,status:'high',desc:'China, Japan, S. Korea — cable, automotive, packaging'},
+  {name:'Western Europe',lat:51,lng:10,kta:18.7,apps:7,status:'high',desc:'EU PVC phase-out driving demand across sectors'},
+  {name:'North America',lat:42,lng:-95,kta:16.2,apps:6,status:'high',desc:'Medical, sports, cold-chain packaging'},
+  {name:'South & SE Asia',lat:15,lng:100,kta:9.1,apps:5,status:'medium',desc:'Agricultural film, packaging growth markets'},
+  {name:'Middle East',lat:24,lng:45,kta:7.3,apps:4,status:'medium',desc:'Construction, geomembrane, industrial'},
+  {name:'Latin America',lat:-15,lng:-60,kta:5.8,apps:4,status:'medium',desc:'Agriculture, packaging, toy manufacturing'},
+  {name:'Eastern Europe',lat:50,lng:28,kta:4.2,apps:3,status:'emerging',desc:'Automotive supply chain, construction'},
+  {name:'Sub-Saharan Africa',lat:-5,lng:22,kta:2.9,apps:2,status:'emerging',desc:'Agricultural mulch, packaging'},
+];
+
+let currentFilter = 'all';
+let tableCurrentFilter = 'all';
+let sortCol = null; let sortDir = 1;
+let engineChart = null;
+
+// ======================================================
+// NAV
+// ======================================================
+function showSection(id, btn) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='markets') setTimeout(initMap,100);
+  if(id==='engine') initEngine();
+  if(id==='pvc') setTimeout(initPVCCharts,100);
+  if(id==='applications') renderTable(APPS);
+  if(id==='search') renderSearchResults(APPS,'');
+  if(id==='grades') renderGrades();
+}
+
+// ======================================================
+// DASHBOARD CHARTS
+// ======================================================
+window.addEventListener('DOMContentLoaded',()=>{
+  renderDashboardCharts();
+  renderTable(APPS);
+  renderSearchResults(APPS,'');
+  renderGrades();
+});
+
+function renderDashboardCharts(){
+  // Sector bar
+  const sectors = {};
+  APPS.forEach(a=>{ sectors[a.sector]=(sectors[a.sector]||0)+a.kta; });
+  const skeys = Object.keys(sectors).sort((a,b)=>sectors[b]-sectors[a]);
+  new Chart(document.getElementById('chartSector'),{
+    type:'bar',
+    data:{labels:skeys,datasets:[{data:skeys.map(k=>+sectors[k].toFixed(1)),backgroundColor:'#1D9E75',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},maxRotation:35,autoSkip:false}},y:{title:{display:true,text:'KTA',font:{size:10}}}}}
+  });
+
+  // Radar
+  new Chart(document.getElementById('chartRadar'),{
+    type:'radar',
+    data:{labels:['Flexibility','Toughness','Clarity','Adhesion','Cling','Elasticity','Softness'],
+    datasets:[
+      {label:'Vistamaxx',data:[95,80,70,85,90,88,92],fill:true,backgroundColor:'rgba(29,158,117,.15)',borderColor:'#1D9E75',pointBackgroundColor:'#1D9E75'},
+      {label:'SBC',data:[85,65,60,55,50,90,70],fill:true,backgroundColor:'rgba(55,138,221,.1)',borderColor:'#378ADD',pointBackgroundColor:'#378ADD'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}}},scales:{r:{ticks:{display:false},pointLabels:{font:{size:10}}}}}
+  });
+
+  // TRL donut
+  const trlCounts = {};
+  APPS.forEach(a=>{ trlCounts[a.trl]=(trlCounts[a.trl]||0)+1; });
+  new Chart(document.getElementById('chartTRL'),{
+    type:'doughnut',
+    data:{labels:Object.keys(trlCounts).map(k=>'TRL '+k),datasets:[{data:Object.values(trlCounts),backgroundColor:['#E1F5EE','#9FE1CB','#1D9E75','#0F6E56']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10}}}}
+  });
+
+  // Displaced materials
+  const dm = {};
+  APPS.forEach(a=>{ const d=a.displaces.split('/')[0].split(' ')[0]; dm[d]=(dm[d]||0)+1; });
+  const dkeys=Object.keys(dm).sort((a,b)=>dm[b]-dm[a]);
+  new Chart(document.getElementById('chartDisplace'),{
+    type:'bar',
+    data:{labels:dkeys,datasets:[{data:dkeys.map(k=>dm[k]),backgroundColor:'#378ADD',borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{stepSize:1}},y:{ticks:{font:{size:10}}}}}
+  });
+}
+
+// ======================================================
+// SEARCH ENGINE
+// ======================================================
+function doSearch(){
+  const q = document.getElementById('searchInput').value.trim();
+  document.getElementById('searchClear').style.display = q ? 'block':'none';
+  const filtered = filterByCategory(q);
+  renderSearchResults(filtered, q);
+}
+
+function clearSearch(){
+  document.getElementById('searchInput').value='';
+  document.getElementById('searchClear').style.display='none';
+  renderSearchResults(filterByCategory(''),'');
+}
+
+function filterCat(cat, btn){
+  currentFilter = cat;
+  document.querySelectorAll('#filterRow .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  doSearch();
+}
+
+function filterByCategory(q){
+  let list = APPS;
+  if(currentFilter!=='all') list = list.filter(a=>a.type===currentFilter);
+  if(q){
+    const ql = q.toLowerCase();
+    list = list.filter(a=>
+      a.name.toLowerCase().includes(ql)||
+      a.sector.toLowerCase().includes(ql)||
+      a.displaces.toLowerCase().includes(ql)||
+      a.grade.toLowerCase().includes(ql)||
+      a.desc.toLowerCase().includes(ql)||
+      a.props.some(p=>p.toLowerCase().includes(ql))||
+      a.rationale.toLowerCase().includes(ql)
+    );
+  }
+  return list;
+}
+
+function hl(text, q){
+  if(!q) return text;
+  const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+  return text.replace(re,'<mark>$1</mark>');
+}
+
+function renderSearchResults(list, q){
+  const area = document.getElementById('searchResultsArea');
+  document.getElementById('search-count').textContent = `Showing ${list.length} application${list.length!==1?'s':''}`;
+  if(!list.length){
+    area.innerHTML='<div class="search-results"><div class="no-results">No applications match your search.</div></div>';
+    return;
+  }
+  area.innerHTML = '<div class="search-results">'+ list.map(a=>`
+    <div class="result-item" onclick="goToApp(${a.id})">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div style="flex:1">
+          <div class="result-title">${hl(a.name,q)}</div>
+          <div class="result-meta">${hl(a.sector,q)} &nbsp;·&nbsp; Displaces: ${hl(a.displaces,q)} &nbsp;·&nbsp; Grade: ${hl(a.grade,q)} &nbsp;·&nbsp; ${a.kta} KTA</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">${hl(a.desc,q)}</div>
+          <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${a.props.map(p=>`<span class="prop-tag">${hl(p,q)}</span>`).join('')}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+          <span class="badge ${a.type==='breakthrough'?'purple':a.type==='displacement'?'blue':'green'}">${a.type}</span>
+          <span class="badge ${scoreColor(a.score)}">${a.score}/100</span>
+          <span style="font-size:11px;color:var(--muted)">TRL ${a.trl}</span>
+        </div>
+      </div>
+    </div>
+  `).join('') + '</div>';
+}
+
+function scoreColor(s){ return s>=90?'green':s>=80?'blue':'amber'; }
+
+function goToApp(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-applications').classList.add('active');
+  document.querySelectorAll('.nav-btn')[2].classList.add('active');
+  renderTable(APPS);
+  setTimeout(()=>openDetail(APPS.find(a=>a.id===id)),200);
+}
+
+// ======================================================
+// TABLE
+// ======================================================
+function renderTable(list){
+  const q = document.getElementById('tableSearch') ? document.getElementById('tableSearch').value.trim() : '';
+  let data = list.filter(a=>tableCurrentFilter==='all'||a.type===tableCurrentFilter);
+  if(q){ const ql=q.toLowerCase(); data=data.filter(a=>a.name.toLowerCase().includes(ql)||a.sector.toLowerCase().includes(ql)||a.displaces.toLowerCase().includes(ql)); }
+  document.getElementById('tableCount').textContent = data.length+' applications';
+  const tbody = document.getElementById('appTableBody');
+  tbody.innerHTML = data.map(a=>`
+    <tr onclick="openDetail(APPS.find(x=>x.id===${a.id}))" style="cursor:pointer">
+      <td><strong>${a.name}</strong></td>
+      <td>${a.sector}</td>
+      <td><span class="badge blue">${a.displaces}</span></td>
+      <td style="font-family:monospace;font-size:12px">${a.grade}</td>
+      <td><strong>${a.kta}</strong> KTA</td>
+      <td>${trlDots(a.trl)}</td>
+      <td><span class="badge ${a.type==='breakthrough'?'purple':a.type==='displacement'?'blue':'green'}">${a.type}</span></td>
+      <td><span class="badge ${scoreColor(a.score)}">${a.score}</span></td>
+    </tr>
+  `).join('');
+}
+
+function trlDots(n){
+  let h='<div class="trl-bar"><div class="trl-dots">';
+  const col = n>=5?'green':n>=3?'amber':'blue';
+  for(let i=1;i<=6;i++) h+=`<div class="trl-dot${i<=n?' filled '+col:''}"></div>`;
+  h+=`</div><span class="trl-num">${n}</span></div>`;
+  return h;
+}
+
+function tableFilter(cat,btn){
+  tableCurrentFilter=cat;
+  document.querySelectorAll('#tableFilterRow .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable(APPS);
+}
+
+function filterTable(){ renderTable(APPS); }
+
+function openDetail(a){
+  const p=document.getElementById('detailPanel');
+  document.getElementById('dp-title').textContent=a.name;
+  document.getElementById('dp-desc').textContent=a.desc;
+  document.getElementById('dp-grid').innerHTML=`
+    <div class="detail-item"><div class="dl">Grade</div><div class="dv" style="font-size:13px">${a.grade}</div></div>
+    <div class="detail-item"><div class="dl">Market demand</div><div class="dv" style="color:var(--green)">${a.kta} KTA</div></div>
+    <div class="detail-item"><div class="dl">TRL</div><div class="dv">${a.trl} / 6</div></div>
+    <div class="detail-item"><div class="dl">Score</div><div class="dv" style="color:var(--${scoreColor(a.score)==='green'?'green':scoreColor(a.score)==='blue'?'blue':'amber'})">${a.score}/100</div></div>
+    <div class="detail-item"><div class="dl">Density (g/cm³)</div><div class="dv">${a.density}</div></div>
+    <div class="detail-item"><div class="dl">MFR (g/10min)</div><div class="dv">${a.mfr}</div></div>
+    <div class="detail-item"><div class="dl">Hardness</div><div class="dv">${a.hardness}</div></div>
+    <div class="detail-item"><div class="dl">Vicat (°C)</div><div class="dv">${a.vicat}</div></div>
+  `;
+  document.getElementById('dp-props').innerHTML=a.props.map(p=>`<span class="prop-tag">${p}</span>`).join('');
+  document.getElementById('dp-rationale').textContent=a.rationale;
+  p.classList.add('show');
+  p.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeDetail(){ document.getElementById('detailPanel').classList.remove('show'); }
+
+// ======================================================
+// MAP
+// ======================================================
+let mapInited=false;
+function initMap(){
+  if(mapInited) return; mapInited=true;
+  const map=L.map('map',{center:[20,15],zoom:2});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM'}).addTo(map);
+  const colMap={high:'#1D9E75',medium:'#EF9F27',emerging:'#378ADD'};
+  REGIONS.forEach(r=>{
+    const circle=L.circleMarker([r.lat,r.lng],{radius:r.kta*1.2,fillColor:colMap[r.status],color:'#fff',weight:2,fillOpacity:.75}).addTo(map);
+    circle.bindPopup(`<strong>${r.name}</strong><br>${r.kta} KTA potential<br><span style="color:#666;font-size:11px">${r.desc}</span>`);
+  });
+  // Sidebar
+  const rl=document.getElementById('regionList');
+  const sorted=[...REGIONS].sort((a,b)=>b.kta-a.kta);
+  rl.innerHTML=sorted.map(r=>`
+    <div class="region-item">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="region-name">${r.name}</div>
+        <span class="badge ${r.status==='high'?'green':r.status==='medium'?'amber':'blue'}">${r.kta} KTA</span>
+      </div>
+      <div class="region-meta"><span>${r.apps} applications</span></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">${r.desc}</div>
+    </div>
+  `).join('');
+
+  // Region bar chart
+  new Chart(document.getElementById('chartRegion'),{
+    type:'bar',
+    data:{labels:sorted.map(r=>r.name),datasets:[{data:sorted.map(r=>r.kta),backgroundColor:sorted.map(r=>r.status==='high'?'#1D9E75':r.status==='medium'?'#EF9F27':'#378ADD'),borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'KTA'}},y:{ticks:{font:{size:10}}}}}
+  });
+
+  // Growth chart
+  const sectors2=['Cable & Elec.','Agriculture','Medical','Packaging','Automotive','Sports','Industrial','Consumer'];
+  const growth=[28,22,18,17,15,24,12,20];
+  new Chart(document.getElementById('chartGrowth'),{
+    type:'bar',
+    data:{labels:sectors2,datasets:[{data:growth,backgroundColor:'#7F77DD',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},maxRotation:35,autoSkip:false}},y:{title:{display:true,text:'Growth index'},ticks:{font:{size:10}}}}}
+  });
+}
+
+// ======================================================
+// GRADES
+// ======================================================
+function renderGrades(){
+  // Table
+  const tbody=document.getElementById('gradeTableBody');
+  const q=(document.getElementById('gradeSearch')||{}).value||'';
+  const list=q?GRADES.filter(g=>g.grade.toLowerCase().includes(q.toLowerCase())||g.bestFor.toLowerCase().includes(q.toLowerCase())):GRADES;
+  tbody.innerHTML=list.map(g=>`
+    <tr><td><strong>${g.grade}</strong></td><td>${g.mfr}</td><td>${g.density}</td><td>${g.hardness}</td><td>${g.vicat}</td><td style="color:var(--muted)">${g.bestFor}</td></tr>
+  `).join('');
+
+  // Bubble
+  if(!window._bubbleInited){
+    window._bubbleInited=true;
+    new Chart(document.getElementById('chartBubble'),{
+      type:'bubble',
+      data:{datasets:[{label:'Grades',data:GRADES.map(g=>({x:g.mfr,y:g.density,r:Math.sqrt(g.vicat)*1.5,label:g.grade})),backgroundColor:'rgba(29,158,117,.6)',borderColor:'#1D9E75'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw.label}: MFR ${ctx.raw.x}, ρ ${ctx.raw.y}`}}},scales:{x:{title:{display:true,text:'MFR (g/10min)'},type:'logarithmic'},y:{title:{display:true,text:'Density (g/cm³)'},min:0.860,max:0.890}}}
+    });
+    // Grade bar
+    new Chart(document.getElementById('chartGradeBar'),{
+      type:'bar',
+      data:{labels:GRADES.map(g=>g.grade.replace('Vistamaxx ','')),datasets:[
+        {label:'MFR (log)',data:GRADES.map(g=>Math.log10(g.mfr)*30),backgroundColor:'#1D9E75',borderRadius:3},
+        {label:'Vicat °C',data:GRADES.map(g=>g.vicat),backgroundColor:'#378ADD',borderRadius:3}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}
+    });
+    // Grade radar
+    new Chart(document.getElementById('chartGradeRadar'),{
+      type:'radar',
+      data:{labels:['MFR','Density','Hardness','Vicat','Flexibility'],
+      datasets:GRADES.slice(0,4).map((g,i)=>({label:g.grade.replace('Vistamaxx ','VM '),data:[Math.min(100,g.mfr/80*100),((g.density-0.860)/(0.890-0.860))*100,(parseInt(g.hardness)/100)*100,(g.vicat/103)*100,100-(g.mfr/80*10)],fill:false,borderColor:['#1D9E75','#378ADD','#EF9F27','#7F77DD'][i],pointBackgroundColor:['#1D9E75','#378ADD','#EF9F27','#7F77DD'][i]}))},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:8}}},scales:{r:{ticks:{display:false}}}}
+    });
+  }
+}
+
+function filterGrades(){ renderGrades(); }
+
+function switchGradeTab(tab,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('gtab-'+tab).classList.add('active');
+}
+
+// ======================================================
+// PVC CASE CHARTS
+// ======================================================
+let pvcInited=false;
+function initPVCCharts(){
+  if(pvcInited) return; pvcInited=true;
+
+  // Radar: VM1120 vs PVC
+  new Chart(document.getElementById('chartPVCRadar'),{
+    type:'radar',
+    data:{labels:['Flexibility','Halogen-free','Weight','Chemical res.','FR rating','Processability','Recyclability'],
+    datasets:[
+      {label:'Vistamaxx 1120',data:[92,100,88,85,82,90,95],fill:true,backgroundColor:'rgba(29,158,117,.15)',borderColor:'#1D9E75',pointBackgroundColor:'#1D9E75'},
+      {label:'Plasticised PVC',data:[78,0,40,70,75,85,20],fill:true,backgroundColor:'rgba(226,75,74,.1)',borderColor:'#E24B4A',pointBackgroundColor:'#E24B4A'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10}}},scales:{r:{min:0,max:100,ticks:{display:false},pointLabels:{font:{size:11}}}}}
+  });
+
+  // Demand projection
+  const years=['2025','2026','2027','2028','2029','2030','2031','2032'];
+  const pvcOut=[0,2.1,5.8,8.4,10.9,13.1,14.8,15.4];
+  const cumKta=[0,2.1,7.9,16.3,27.2,40.3,55.1,70.5];
+  new Chart(document.getElementById('chartPVCDemand'),{
+    type:'bar',
+    data:{labels:years,datasets:[
+      {label:'Annual Vistamaxx demand (KTA)',data:pvcOut,backgroundColor:'#1D9E75',borderRadius:4,yAxisID:'y'},
+      {label:'Cumulative KTA',data:cumKta,type:'line',borderColor:'#378ADD',pointBackgroundColor:'#378ADD',tension:.4,yAxisID:'y1',fill:false,borderWidth:2,pointRadius:4}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}}},scales:{
+      y:{title:{display:true,text:'Annual KTA',font:{size:10}},ticks:{font:{size:10}}},
+      y1:{position:'right',title:{display:true,text:'Cumulative KTA',font:{size:10}},ticks:{font:{size:10}},grid:{drawOnChartArea:false}}
+    }}
+  });
+
+  // Engine output — ATH filler sweep
+  const ath=[],stab=[],fail=[];
+  for(let a=0;a<=70;a+=2){
+    ath.push(a+'%');
+    const d2=(a/10-3)*(a/10-3)+4+2*((a/10-3)*0.8);
+    const fd=Math.exp(-0.08*Math.pow(d2+1,2)/500);
+    const fp=Math.min(0.99,(1-fd)*1.1/Math.max(0.6,1-Math.abs(a-60)*0.02));
+    stab.push(+(fd*100).toFixed(1));
+    fail.push(+(fp*100).toFixed(1));
+  }
+  new Chart(document.getElementById('chartPVCEngine'),{
+    type:'line',
+    data:{labels:ath,datasets:[
+      {label:'Stability index (%)',data:stab,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.08)',fill:true,tension:.4,pointRadius:0,borderWidth:2},
+      {label:'Failure probability (%)',data:fail,borderColor:'#E24B4A',backgroundColor:'rgba(226,75,74,.08)',fill:true,tension:.4,pointRadius:0,borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}},
+        annotation:{annotations:{box:{type:'box',xMin:'54%',xMax:'66%',backgroundColor:'rgba(29,158,117,.08)',borderColor:'#1D9E75',borderWidth:1.5,label:{display:true,content:'Optimal window',font:{size:10},color:'#0F6E56'}}}}},
+      scales:{x:{ticks:{maxTicksLimit:12,font:{size:10}}},y:{min:0,max:100,title:{display:true,text:'%',font:{size:10}}}}}
+  });
+}
+
+const ENG_PARAMS = [
+  {id:'I',label:'Molecular interaction (I)',min:0,max:10,val:4,step:0.1},
+  {id:'Y',label:'Deformation stress (Y)',min:0,max:10,val:3,step:0.1},
+  {id:'P',label:'Structural failure (P)',min:0,max:10,val:2,step:0.1},
+  {id:'C',label:'Temperature / env (C)',min:0,max:10,val:3,step:0.1},
+  {id:'VM',label:'Vistamaxx content (%)',min:5,max:60,val:25,step:1},
+  {id:'CY',label:'Usage cycles',min:0,max:100,val:20,step:1},
+];
+const ENG_RECS=['Current Vistamaxx formulation is optimal. No action required.','Consider increasing Vistamaxx content by 3–5% to buffer stress.','Reduce operating temp or increase Vistamaxx to 30–40%.','Reformulate immediately. Recommend Vistamaxx 3980 at 35–45%.'];
+
+function initEngine(){
+  const wrap=document.getElementById('engineSliders');
+  if(wrap.innerHTML) return;
+  wrap.innerHTML=ENG_PARAMS.map(p=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <label style="font-size:12px;color:var(--muted);width:180px;flex-shrink:0">${p.label}</label>
+      <input type="range" id="es-${p.id}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.val}" oninput="runEngine()" style="flex:1">
+      <span style="font-size:12px;font-weight:600;width:44px;text-align:right" id="ev-${p.id}">${p.val}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('engineBars').innerHTML=`
+    ${['Failure prob.','Stability index'].map((lbl,i)=>`
+      <div class="progress-row">
+        <span class="plbl">${lbl}</span>
+        <div class="pbar"><div class="pfill" id="epb-${i}" style="background:${i===0?'var(--red)':'var(--green)'}"></div></div>
+        <span class="pval" id="epv-${i}">—</span>
+      </div>
+    `).join('')}
+  `;
+  runEngine();
+}
+
+function runEngine(){
+  const get=id=>+document.getElementById('es-'+id).value;
+  ENG_PARAMS.forEach(p=>{
+    const v=get(p.id);
+    document.getElementById('ev-'+p.id).textContent = p.id==='VM'?v+'%':v.toFixed(p.step<1?1:0);
+  });
+  const I=get('I'),Y=get('Y'),P=get('P'),C=get('C'),VM=get('VM'),CY=get('CY');
+  const d2=I*I+Y*Y+P*P+C*C+2*I*Y+2*Y*C;
+  const fd=Math.exp(-0.08*Math.pow(d2+1,2)/500);
+  const mem=1+0.015*Math.min(CY,30)+0.008*Math.max(0,CY-30);
+  const vmb=Math.max(0.6,1-Math.abs(VM-30)*0.012);
+  const fp=Math.min(0.99,(1-fd)*mem/vmb);
+  const si=Math.min(0.99,fd*vmb/mem);
+  const cyc=Math.round(Math.max(1,(1-fp)*120/mem));
+  const regime=fp<0.2?0:fp<0.45?1:fp<0.72?2:3;
+
+  document.getElementById('em-d2').textContent=d2.toFixed(1);
+  document.getElementById('em-fd').textContent=fd.toFixed(3);
+  document.getElementById('em-si').textContent=(si*100).toFixed(0)+'%';
+  document.getElementById('em-fp').textContent=(fp*100).toFixed(0)+'%';
+  document.getElementById('em-cy').textContent=cyc;
+
+  [0,1,2,3].forEach(i=>{
+    document.getElementById('reg'+i).style.opacity=i===regime?'1':'0.25';
+  });
+  document.getElementById('regLabel').textContent=['Stable — operating within safe bounds','Attenuating — early wear, monitor usage','Critical risk — composition adjustment needed','Failure imminent — reformulate immediately'][regime];
+  document.getElementById('epb-0').style.width=(fp*100).toFixed(0)+'%';
+  document.getElementById('epv-0').textContent=(fp*100).toFixed(0)+'%';
+  document.getElementById('epb-1').style.width=(si*100).toFixed(0)+'%';
+  document.getElementById('epv-1').textContent=(si*100).toFixed(0)+'%';
+  document.getElementById('engRec').textContent=ENG_RECS[regime];
+  updateEngineChart(I,Y,P,VM,CY);
+}
+
+function updateEngineChart(I,Y,P,VM,CY){
+  const labels=[],stab=[],failure=[];
+  const mem=1+0.015*Math.min(CY,30)+0.008*Math.max(0,CY-30);
+  const vmb=Math.max(0.6,1-Math.abs(VM-30)*0.012);
+  for(let c=0;c<=10;c+=0.5){
+    labels.push(c.toFixed(1));
+    const d2=I*I+Y*Y+P*P+c*c+2*I*Y+2*Y*c;
+    const fd=Math.exp(-0.08*Math.pow(d2+1,2)/500);
+    const fp=Math.min(0.99,(1-fd)*mem/vmb);
+    stab.push(+(fd*vmb/mem*100).toFixed(1));
+    failure.push(+(fp*100).toFixed(1));
+  }
+  if(!engineChart){
+    engineChart=new Chart(document.getElementById('chartEngine'),{
+      type:'line',
+      data:{labels,datasets:[
+        {label:'Stability index (%)',data:stab,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.08)',fill:true,tension:.4,pointRadius:0,borderWidth:2},
+        {label:'Failure probability (%)',data:failure,borderColor:'#E24B4A',backgroundColor:'rgba(226,75,74,.08)',fill:true,tension:.4,pointRadius:0,borderWidth:2}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'Temperature / environment (C)',font:{size:11}}},y:{min:0,max:100,ticks:{font:{size:11}}}},animation:{duration:150}}
+    });
+  } else {
+    engineChart.data.labels=labels;
+    engineChart.data.datasets[0].data=stab;
+    engineChart.data.datasets[1].data=failure;
+    engineChart.update('none');
+  }
+}
+</script>
+
+<!-- PROTECTION LAYER — © 2026 César Agliard Pereira -->
+<script>
+(function(){
+  // 1. Hash de autoria embutido no DOM (invisível)
+  var _ip = document.createElement('meta');
+  _ip.name = 'x-ip-hash';
+  _ip.content = 'ac5d8926b89085dd999a529706e2e64b742208f75cb123239126ae0a4f611d3d';
+  document.head.appendChild(_ip);
+
+  // 2. Bloquear clique direito
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); return false; });
+
+  // 3. Bloquear seleção de texto via teclado
+  document.addEventListener('selectstart', function(e){ e.preventDefault(); return false; });
+
+  // 4. Bloquear Ctrl+C, Ctrl+S, Ctrl+U, Ctrl+A, F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+  document.addEventListener('keydown', function(e){
+    var blocked = false;
+    if(e.key === 'F12') blocked = true;
+    if(e.ctrlKey && ['c','C','s','S','u','U','a','A','p','P'].indexOf(e.key) !== -1) blocked = true;
+    if(e.ctrlKey && e.shiftKey && ['i','I','j','J','c','C'].indexOf(e.key) !== -1) blocked = true;
+    if(blocked){ e.preventDefault(); e.stopPropagation(); return false; }
+  });
+
+  // 5. Detecção de DevTools (redimensionamento suspeito)
+  var _devOpen = false;
+  var _thresh = 160;
+  setInterval(function(){
+    var widthDiff = window.outerWidth - window.innerWidth > _thresh;
+    var heightDiff = window.outerHeight - window.innerHeight > _thresh;
+    if((widthDiff || heightDiff) && !_devOpen){
+      _devOpen = true;
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;font-family:sans-serif;background:#F7F6F3"><h2 style="color:#E24B4A">⚠ Acesso Restrito</h2><p style="color:#666;margin-top:12px">© 2026 César Agliard Pereira — Propriedade Intelectual Protegida</p><p style="color:#999;font-size:12px;margin-top:8px">SHA-256: ac5d8926b89085dd999a529706e2e64b742208f75cb123239126ae0a4f611d3d</p></div>';
+    }
+  }, 1000);
+
+  // 6. Marca d'água invisível no console
+  console.log('%c© 2026 César Agliard Pereira — VistamaxxIQ','color:#1D9E75;font-size:14px;font-weight:bold');
+  console.log('%cSHA-256: ac5d8926b89085dd999a529706e2e64b742208f75cb123239126ae0a4f611d3d','color:#999;font-size:10px');
+  console.log('%cPropriedade intelectual protegida. Reprodução proibida. Lei 9.610/98.','color:#E24B4A;font-size:11px');
+
+})();
+</script>
+<!-- END PROTECTION LAYER -->
+</body>
+</html>
